@@ -17,6 +17,9 @@ import (
 // K9sConfig represents K9s configuration dir env var.
 const K9sConfig = "K9SCONFIG"
 
+// K9sDumpLocationConfig
+const K9sDumpLocationConfig = "K9SDUMPDIR"
+
 var (
 	// DefaultK9sHome represent K9s home directory.
 	DefaultK9sHome = filepath.Join(mustK9sHome(), ".k9s")
@@ -25,7 +28,7 @@ var (
 	// K9sLogs represents K9s log.
 	K9sLogs = filepath.Join(os.TempDir(), fmt.Sprintf("k9s-%s.log", MustK9sUser()))
 	// K9sDumpDir represents a directory where K9s screen dumps will be persisted.
-	K9sDumpDir = filepath.Join(os.TempDir(), fmt.Sprintf("k9s-screens-%s", MustK9sUser()))
+	K9sDumpDir = mustK9sDumpDir()
 )
 
 type (
@@ -63,6 +66,15 @@ func K9sHome() string {
 	}
 
 	return DefaultK9sHome
+}
+
+// mustK9sDumpDir returns k9s logs and dumps directory or a temp dir
+func mustK9sDumpDir() string {
+	if env := os.Getenv(K9sDumpLocationConfig); env != "" {
+		return env
+	}
+
+	return os.TempDir()
 }
 
 // NewConfig creates a new default config.
