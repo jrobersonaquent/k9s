@@ -1,11 +1,40 @@
-<img src="assets/k9s.png">
+<img src="assets/k9s.png" alt="k9s">
 
-# K9s - Kubernetes CLI To Manage Your Clusters In Style!
+## K9s - Kubernetes CLI To Manage Your Clusters In Style!
 
 K9s provides a terminal UI to interact with your Kubernetes clusters.
 The aim of this project is to make it easier to navigate, observe and manage
 your applications in the wild. K9s continually watches Kubernetes
 for changes and offers subsequent commands to interact with your observed resources.
+
+---
+
+## Announcement
+
+<center>
+<img src="https://raw.githubusercontent.com/imhotepio/k9salpha/master/assets/k9sa_blue_300.png" alt="k9salpha" width="300"/>
+<h1>K9sAlpha RC-0 Is Out!</h1>
+</center>
+
+<br/>
+
+Fresh off the press [K9sAlpha](https://k9salpha.io) is now available!
+Please read the details in the docs and checkout the new repo.
+
+- Store: [K9sAlpha Store](https://store.k9salpha.io).
+- Screencast: [K9sAlpha-v1.0.0-rc.0](https://www.youtube.com/watch?v=hLYK0oPLOIY&t=787s)
+
+> NOTE: Upon purchase, in order to activate your license, please send us a valid user name so we can generate your personalized license key. All licenses are valid for a whole year from the date of purchase.
+
+For all other cases, please reach out to us so we can discuss your needs:
+
+- Corporate licenses
+- Education
+- Non Profit
+- Active K9s sponsors
+- Long term K9s supporters and contributors
+- Can't afford it
+- Others...
 
 ---
 
@@ -70,18 +99,29 @@ K9s is available on Linux, macOS and Windows platforms.
   ```
 
 * Via [Chocolatey](https://chocolatey.org/packages/k9s) for Windows
-  
+
   ```shell
   choco install k9s
   ```
 
 * Via a GO install
-  
+
   ```shell
   # NOTE: The dev version will be in effect!
   go get -u github.com/derailed/k9s
   ```
 
+* Via [Webi](https://webinstall.dev) for Linux and macOS
+
+  ```shell
+  curl -sS https://webinstall.dev/k9s | bash
+  ```
+
+* Via [Webi](https://webinstall.dev) for Windows
+
+  ```shell
+  curl.exe -A MS https://webinstall.dev/k9s | powershell
+  ```
 ---
 
 ## Building From Source
@@ -99,6 +139,8 @@ K9s is available on Linux, macOS and Windows platforms.
 
 ## Running with Docker
 
+### Running the official Docker image
+
   You can run k9s as a Docker container by mounting your `KUBECONFIG`:
 
   ```shell
@@ -109,6 +151,28 @@ K9s is available on Linux, macOS and Windows platforms.
 
   ```shell
   docker run --rm -it -v ~/.kube/config:/root/.kube/config quay.io/derailed/k9s
+  ```
+
+### Building your own Docker image
+
+  You can build your own Docker image of k9s from the [Dockerfile](Dockerfile) with the following:
+
+  ```shell
+  docker build -t k9s-docker:0.1 .
+  ```
+
+  You can get the latest stable `kubectl` version and pass it to the `docker build` command with the `--build-arg` option.
+  You can use the `--build-arg` option to pass any valid `kubectl` version (like `v1.18.0` or `v1.19.1`).
+
+  ```shell
+  KUBECTL_VERSION=$(make kubectl-stable-version 2>/dev/null)
+  docker build --build-arg KUBECTL_VERSION=${KUBECTL_VERSION} -t k9s-docker:0.1 .
+  ```
+
+  Run your container:
+
+  ```shell
+  docker run --rm -it -v ~/.kube/config:/root/.kube/config k9s-docker:0.1
   ```
 
 ---
@@ -130,6 +194,8 @@ K9s is available on Linux, macOS and Windows platforms.
     export K9S_EDITOR=my_fav_editor
     ```
 
+* K9s prefers recent kubernetes versions ie 1.16+
+
 ---
 
 ## The Command Line
@@ -143,7 +209,7 @@ k9s info
 k9s -n mycoolns
 # Start K9s in an existing KubeConfig context
 k9s --context coolCtx
-# Start K9s in readonly mode - with all modification commands disabled
+# Start K9s in readonly mode - with all cluster modification commands disabled
 k9s --readonly
 ```
 
@@ -184,6 +250,7 @@ K9s uses aliases to navigate most K8s resources.
 | View a Kubernetes resource using singular/plural or short-name | `:`po⏎                        | accepts singular, plural, short-name or alias ie pod or pods           |
 | View a Kubernetes resource in a given namespace                | `:`alias namespace⏎           |                                                                        |
 | Filter out a resource view given a filter                      | `/`filter⏎                    | Regex2 supported ie `fred|blee` to filter resources named fred or blee |
+| Inverse regex filer                                            | `/`! filter⏎                  | Keep everything that *doesn't* match.                                  |
 | Filter resource view by labels                                 | `/`-l label-selector⏎         |                                                                        |
 | Fuzzy find a resource given a filter                           | `/`-f filter⏎                 |                                                                        |
 | Bails out of view/command/filter mode                          | `<esc>`                       |                                                                        |
@@ -196,6 +263,7 @@ K9s uses aliases to navigate most K8s resources.
 | To kill a resource (no confirmation dialog!)                   | `ctrl-k`                      |                                                                        |
 | Launch pulses view                                             | `:`pulses or pu⏎              |                                                                        |
 | Launch XRay view                                               | `:`xray RESOURCE [NAMESPACE]⏎ | RESOURCE can be one of po, svc, dp, rs, sts, ds, NAMESPACE is optional |
+| Launch Popeye view                                             | `:`popeye or pop⏎             | See https://popeyecli.io                                               |
 
 ---
 
@@ -214,6 +282,7 @@ K9s uses aliases to navigate most K8s resources.
 
 ## Demo Videos/Recordings
 
+* [k9s Kubernetes UI - A Terminal-Based Vim-Like Kubernetes Dashboard](https://youtu.be/boaW9odvRCc)
 * [K9s v0.21.3](https://youtu.be/wG8KCwDAhnw)
 * [K9s v0.19.X](https://youtu.be/kj-WverKZ24)
 * [K9s v0.18.0](https://www.youtube.com/watch?v=zMnD5e53yRw)
@@ -238,8 +307,14 @@ K9s uses aliases to navigate most K8s resources.
   k9s:
     # Represents ui poll intervals. Default 2secs
     refreshRate: 2
+    # Number of retries once the connection to the api-server is lost. Default 15.
+    maxConnRetry: 5
+    # Enable mouse support. Default false
+    enableMouse: true
     # Set to true to hide K9s header. Default false
     headless: false
+    # Set to true to hide K9s crumbs. Default false
+    crumbsless: false
     # Indicates whether modification commands like delete/kill/edit are disabled. Default is false
     readOnly: false
     # Toggles icons display as not all terminal support these chars.
@@ -250,7 +325,7 @@ K9s uses aliases to navigate most K8s resources.
       tail: 200
       # Defines the total number of log lines to allow in the view. Default 1000
       buffer: 500
-      # Represents how far to go back in the log timeline in seconds. Default is 5min
+      # Represents how far to go back in the log timeline in seconds. Setting to -1 will show all available logs. Default is 5min.
       sinceSeconds: 300
       # Go full screen while displaying logs. Default false
       fullScreenLogs: false
@@ -628,11 +703,11 @@ roleRef:
 
 Example: Dracula Skin ;)
 
-<img src="assets/skins/dracula.png">
+<img src="assets/skins/dracula.png" alt="Dracula Skin">
 
 You can style K9s based on your own sense of look and style. Skins are YAML files, that enable a user to change the K9s presentation layer. K9s skins are loaded from `$HOME/.k9s/skin.yml`. If a skin file is detected then the skin would be loaded if not the current stock skin remains in effect.
 
-You can also change K9s skins based on the cluster you are connecting too. In this case, you can specify the skin file name as `$HOME/.k9s/mycluster_skin.yml`
+You can also change K9s skins based on the cluster you are connecting too. In this case, you can specify the skin file name as `$HOME/.k9s/mycontext_skin.yml`
 Below is a sample skin file, more skins are available in the skins directory in this repo, just simply copy any of these in your user's home dir as `skin.yml`.
 
 Colors can be defined by name or uing an hex representation. Of recent, we've added a color named `default` to indicate a transparent background color to preserve your terminal background color settings if so desired.
@@ -714,7 +789,7 @@ k9s:
 ## Known Issues
 
 This is still work in progress! If something is broken or there's a feature
-that you want, please open a PR or file a ticket.
+that you want, please file an issue and if so inclined submit a PR!
 
 K9s will most likely blow up if...
 
@@ -734,9 +809,17 @@ to make this project a reality!
 ## Meet The Core Team!
 
 * [Fernand Galiana](https://github.com/derailed)
-  * <img src="assets/mail.png" width="16" height="auto"/>  fernand@imhotep.io
-  * <img src="assets/twitter.png" width="16" height="auto"/> [@kitesurfer](https://twitter.com/kitesurfer?lang=en)
-We always enjoy hearing from folks who benefit from our work.
+  * <img src="assets/mail.png" width="16" height="auto" alt="email"/>  fernand@imhotep.io
+  * <img src="assets/twitter.png" width="16" height="auto" alt="twitter"/> [@kitesurfer](https://twitter.com/kitesurfer?lang=en)
+
+We always enjoy hearing from folks who benefit from our work!
+
+## Contributions Guideline
+
+* File an issue first prior to submitting a PR!
+* Ensure all exported items are properly commented
+* If applicable, submit a test suite against your PR
+
 ---
 
-<img src="assets/imhotep_logo.png" width="32" height="auto"/> &nbsp;© 2020 Imhotep Software LLC. All materials licensed under [Apache v2.0](http://www.apache.org/licenses/LICENSE-2.0)
+<img src="assets/imhotep_logo.png" width="32" height="auto" alt="Imhotep"/> &nbsp;© 2020 Imhotep Software LLC. All materials licensed under [Apache v2.0](http://www.apache.org/licenses/LICENSE-2.0)

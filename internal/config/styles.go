@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/derailed/tview"
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"gopkg.in/yaml.v2"
 )
 
@@ -421,7 +421,7 @@ func (s *Styles) AddListener(l StyleListener) {
 	s.listeners = append(s.listeners, l)
 }
 
-// RemoveListener unregister a listener.
+// RemoveListener removes a listener.
 func (s *Styles) RemoveListener(l StyleListener) {
 	victim := -1
 	for i, lis := range s.listeners {
@@ -510,5 +510,12 @@ func (s *Styles) Update() {
 	tview.Styles.PrimaryTextColor = s.FgColor()
 	tview.Styles.BorderColor = s.K9s.Frame.Border.FgColor.Color()
 	tview.Styles.FocusColor = s.K9s.Frame.Border.FocusColor.Color()
+	tview.Styles.TitleColor = s.FgColor()
+	tview.Styles.GraphicsColor = s.FgColor()
+	tview.Styles.SecondaryTextColor = s.FgColor()
+	tview.Styles.TertiaryTextColor = s.FgColor()
+	tview.Styles.InverseTextColor = s.FgColor()
+	tview.Styles.ContrastSecondaryTextColor = s.FgColor()
+
 	s.fireStylesChanged()
 }
