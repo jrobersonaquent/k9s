@@ -7,7 +7,7 @@ import (
 	"github.com/derailed/k9s/internal/config"
 	"github.com/derailed/k9s/internal/render"
 	"github.com/derailed/k9s/internal/ui"
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,20 +29,21 @@ func NewNamespace(gvr client.GVR) ResourceViewer {
 	n.GetTable().SetDecorateFn(n.decorate)
 	n.GetTable().SetColorerFn(render.Namespace{}.ColorerFunc())
 	n.GetTable().SetEnterFn(n.switchNs)
-	n.SetBindKeysFn(n.bindKeys)
+	n.AddBindKeysFn(n.bindKeys)
 
 	return &n
 }
 
 func (n *Namespace) bindKeys(aa ui.KeyActions) {
 	aa.Add(ui.KeyActions{
-		ui.KeyU: ui.NewKeyAction("Use", n.useNsCmd, true),
+		ui.KeyU:      ui.NewKeyAction("Use", n.useNsCmd, true),
+		ui.KeyShiftS: ui.NewKeyAction("Sort Status", n.GetTable().SortColCmd(statusCol, true), false),
 	})
 }
 
 func (n *Namespace) switchNs(app *App, model ui.Tabular, gvr, path string) {
 	n.useNamespace(path)
-	if err := app.gotoResource("pods", "", true); err != nil {
+	if err := app.gotoResource("pods", "", false); err != nil {
 		app.Flash().Err(err)
 	}
 }

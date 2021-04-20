@@ -12,12 +12,19 @@ import (
 	"github.com/derailed/k9s/internal/render"
 	"github.com/derailed/k9s/internal/ui"
 	"github.com/fatih/color"
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+)
+
+const (
+	windowsOS      = "windows"
+	powerShell     = "powershell"
+	osBetaSelector = "beta.kubernetes.io/os"
+	osSelector     = "kubernetes.io/os"
 )
 
 // Pod represents a pod viewer.
@@ -29,9 +36,11 @@ type Pod struct {
 func NewPod(gvr client.GVR) ResourceViewer {
 	p := Pod{}
 	p.ResourceViewer = NewPortForwardExtender(
-		NewLogsExtender(NewBrowser(gvr), p.selectedContainer),
+		NewImageExtender(
+			NewLogsExtender(NewBrowser(gvr), p.selectedContainer),
+		),
 	)
-	p.SetBindKeysFn(p.bindKeys)
+	p.AddBindKeysFn(p.bindKeys)
 	p.GetTable().SetEnterFn(p.showContainers)
 	p.GetTable().SetColorerFn(render.Pod{}.ColorerFunc())
 	p.GetTable().SetDecorateFn(p.portForwardIndicator)
@@ -61,7 +70,7 @@ func (p *Pod) bindDangerousKeys(aa ui.KeyActions) {
 }
 
 func (p *Pod) bindKeys(aa ui.KeyActions) {
-	if !p.App().Config.K9s.GetReadOnly() {
+	if !p.App().Config.K9s.IsReadOnly() {
 		p.bindDangerousKeys(aa)
 	}
 
@@ -132,8 +141,8 @@ func (p *Pod) portForwardContext(ctx context.Context) context.Context {
 }
 
 func (p *Pod) killCmd(evt *tcell.EventKey) *tcell.EventKey {
-	sels := p.GetTable().GetSelectedItems()
-	if len(sels) == 0 {
+	selections := p.GetTable().GetSelectedItems()
+	if len(selections) == 0 {
 		return evt
 	}
 
@@ -147,14 +156,20 @@ func (p *Pod) killCmd(evt *tcell.EventKey) *tcell.EventKey {
 		p.App().Flash().Err(fmt.Errorf("expecting a nuker for %q", p.GVR()))
 		return nil
 	}
+	if len(selections) > 1 {
+		p.App().Flash().Infof("Delete %d marked %s", len(selections), p.GVR())
+	} else {
+		p.App().Flash().Infof("Delete resource %s %s", p.GVR(), selections[0])
+	}
 	p.GetTable().ShowDeleted()
-	for _, res := range sels {
-		p.App().Flash().Infof("Delete resource %s -- %s", p.GVR(), res)
-		if err := nuker.Delete(res, true, true); err != nil {
+	log.Debug().Msgf("SELS %v", selections)
+	for _, path := range selections {
+		if err := nuker.Delete(path, true, true); err != nil {
 			p.App().Flash().Errf("Delete failed with %s", err)
 		} else {
-			p.App().factory.DeleteForwarder(res)
+			p.App().factory.DeleteForwarder(path)
 		}
+		p.GetTable().DeleteMark(path)
 	}
 	p.Refresh()
 
@@ -233,11 +248,15 @@ func resumeShellIn(a *App, c model.Component, path, co string) {
 	shellIn(a, path, co)
 }
 
-func shellIn(a *App, path, co string) {
-	args := computeShellArgs(path, co, a.Conn().Config().Flags().KubeConfig)
+func shellIn(a *App, fqn, co string) {
+	os, err := getPodOS(a.factory, fqn)
+	if err != nil {
+		log.Warn().Err(err).Msgf("os detect failed")
+	}
+	args := computeShellArgs(fqn, co, a.Conn().Config().Flags().KubeConfig, os)
 
 	c := color.New(color.BgGreen).Add(color.FgBlack).Add(color.Bold)
-	if !runK(a, shellOpts{clear: true, banner: c.Sprintf(bannerFmt, path, co), args: args}) {
+	if !runK(a, shellOpts{clear: true, banner: c.Sprintf(bannerFmt, fqn, co), args: args}) {
 		a.Flash().Err(errors.New("Shell exec failed"))
 	}
 }
@@ -283,8 +302,11 @@ func attachIn(a *App, path, co string) {
 	}
 }
 
-func computeShellArgs(path, co string, kcfg *string) []string {
+func computeShellArgs(path, co string, kcfg *string, os string) []string {
 	args := buildShellArgs("exec", path, co, kcfg)
+	if os == windowsOS {
+		return append(args, "--", powerShell)
+	}
 	return append(args, "--", "sh", "-c", shellCheck)
 }
 
@@ -349,17 +371,32 @@ func podIsRunning(f dao.Factory, path string) bool {
 	}
 
 	var re render.Pod
-	log.Debug().Msgf("Phase %#v", re.Phase(po))
 	return re.Phase(po) == render.Running
+}
+
+func getPodOS(f dao.Factory, fqn string) (string, error) {
+	po, err := fetchPod(f, fqn)
+	if err != nil {
+		return "", err
+	}
+	if os, ok := po.Spec.NodeSelector[osBetaSelector]; ok {
+		return os, nil
+	}
+	os, ok := po.Spec.NodeSelector[osSelector]
+	if !ok {
+		return "", fmt.Errorf("no os information available")
+	}
+
+	return os, nil
 }
 
 func resourceSorters(t *Table) ui.KeyActions {
 	return ui.KeyActions{
 		ui.KeyShiftC:   ui.NewKeyAction("Sort CPU", t.SortColCmd(cpuCol, false), false),
 		ui.KeyShiftM:   ui.NewKeyAction("Sort MEM", t.SortColCmd(memCol, false), false),
-		ui.KeyShiftX:   ui.NewKeyAction("Sort %CPU (REQ)", t.SortColCmd("%CPU/R", false), false),
-		ui.KeyShiftZ:   ui.NewKeyAction("Sort %MEM (REQ)", t.SortColCmd("%MEM/R", false), false),
-		tcell.KeyCtrlX: ui.NewKeyAction("Sort %CPU (LIM)", t.SortColCmd("%CPU/L", false), false),
-		tcell.KeyCtrlQ: ui.NewKeyAction("Sort %MEM (LIM)", t.SortColCmd("%MEM/L", false), false),
+		ui.KeyShiftX:   ui.NewKeyAction("Sort CPU/R", t.SortColCmd("%CPU/R", false), false),
+		ui.KeyShiftZ:   ui.NewKeyAction("Sort MEM/R", t.SortColCmd("%MEM/R", false), false),
+		tcell.KeyCtrlX: ui.NewKeyAction("Sort CPU/L", t.SortColCmd("%CPU/L", false), false),
+		tcell.KeyCtrlQ: ui.NewKeyAction("Sort MEM/L", t.SortColCmd("%MEM/L", false), false),
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -101,7 +101,7 @@ func toVerbIcon(ok bool) string {
 	if ok {
 		return "[green::b] ✓ [::]"
 	}
-	return "[orangered::b] 𐄂 [::]"
+	return "[orangered::b] × [::]"
 }
 
 func hasVerb(verbs []string, verb string) bool {

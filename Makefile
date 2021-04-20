@@ -1,9 +1,8 @@
 NAME    := k9s
 PACKAGE := github.com/jrobersonaquent/$(NAME)
 GIT     := $(shell git rev-parse --short HEAD)
-SOURCE_DATE_EPOCH ?= $(shell date +%s)
-DATE    := $(shell date -u -d @${SOURCE_DATE_EPOCH} +%FT%T%Z)
-VERSION  ?= v0.21.8
+DATE     := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+VERSION  ?= v0.24.7
 IMG_NAME := jrobersonaquent/k9s
 IMAGE    := ${IMG_NAME}:${VERSION}
 
@@ -20,6 +19,9 @@ build: ## Builds the CLI
 	go build \
 	-ldflags "-w -s -X ${PACKAGE}/cmd.version=${VERSION} -X ${PACKAGE}/cmd.commit=${GIT}" \
 	-a -tags netgo -o execs/${NAME} main.go
+
+kubectl-stable-version:  ## Get kubectl latest stable version
+	curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
 
 img: ## Build Docker Image
 	docker build --rm -t ${IMAGE} .
