@@ -24,7 +24,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.10
 	github.com/openfaas/faas v0.0.0-20200207215241-6afae214e3ec
 	github.com/openfaas/faas-cli v0.0.0-20200124160744-30b7cec9634c
-	github.com/openfaas/faas-provider v0.15.0
+	github.com/openfaas/faas-provider v0.20.0
 	github.com/petergtz/pegomock v2.9.0+incompatible
 	github.com/rakyll/hey v0.1.4
 	github.com/rs/zerolog v1.21.0
@@ -32,7 +32,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.0
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/text v0.3.5
+	golang.org/x/text v0.3.6
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.5.3
 	k8s.io/api v0.20.5
